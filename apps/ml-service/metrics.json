@@ -4,13 +4,13 @@
     "mae": 18.523,
     "rmse": 29.106,
     "r2_score": 0.451,
-    "trained_at": "2026-10-06T20:47:58.802373"
+    "trained_at": "2026-10-20T00:45:30.270530"
   },
   "demand": {
     "model_name": "RandomForest NGO Demand Regressor",
     "mae": 4.091,
     "rmse": 6.366,
     "r2_score": 0.988,
-    "trained_at": "2026-10-06T20:47:58.933684"
+    "trained_at": "2026-10-20T00:45:30.432527"
   }
 }
