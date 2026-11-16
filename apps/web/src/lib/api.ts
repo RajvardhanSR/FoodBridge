@@ -160,6 +160,9 @@ function interceptDemoRequest(method: string, endpoint: string, body?: any): any
   if (method === 'POST' && (cleanUrl === '/ai/predict/demand' || cleanUrl === '/ai/agent/demand-forecast')) {
     return demoStorage.predictDemand(body);
   }
+  if (method === 'POST' && (cleanUrl === '/ai/simulate/platform' || cleanUrl === '/ai/platform/simulate')) {
+    return demoStorage.simulatePlatform(body);
+  }
 
   return undefined;
 }

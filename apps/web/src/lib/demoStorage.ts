@@ -1152,6 +1152,115 @@ export const demoStorage = {
     };
   },
 
+  simulatePlatform(body: any = {}) {
+    const shock = body.shock || 'NORMAL';
+    const region = body.region || 'ALL';
+    const donorParticipation = Number(body.donorParticipation) || 75;
+    const volunteerCount = Number(body.volunteerCount) || 180;
+
+    let surplusMult = (donorParticipation / 75);
+    let demandMult = 1.0;
+    let speedPenaltyMins = 0;
+    let shockDescription = 'Standard operational baseline conditions across Delhi-NCR.';
+
+    if (shock === 'WINTER_COLD_WAVE') {
+      demandMult = 1.42;
+      surplusMult *= 0.96;
+      speedPenaltyMins = 6;
+      shockDescription = 'Winter cold wave triggers emergency shelter demand surge (+42%) with transit delays.';
+    } else if (shock === 'MONSOON_FLOOD') {
+      demandMult = 1.34;
+      surplusMult *= 0.88;
+      speedPenaltyMins = 16;
+      shockDescription = 'Monsoon road logging & weather distress: +34% demand spike, fleet speed slowed by 16 mins.';
+    } else if (shock === 'FESTIVAL_WEDDING_SURGE') {
+      surplusMult *= 1.82;
+      demandMult = 1.12;
+      speedPenaltyMins = -2;
+      shockDescription = 'Festive banquet & wedding season: massive food surplus surge (+82%), high night ops volume.';
+    } else if (shock === 'FLEET_DISRUPTION') {
+      demandMult = 1.05;
+      surplusMult *= 0.92;
+      speedPenaltyMins = 24;
+      shockDescription = 'Severe volunteer courier shortage: average pickup delays jump to 48 mins, perishability hazard elevated.';
+    }
+
+    const baseZones = [
+      { id: 'central', name: 'Central Delhi', hubs: 'Connaught Place / Karol Bagh', baseSurplus: 340, baseDemand: 280, donors: 28, ngos: 14 },
+      { id: 'north', name: 'North Delhi', hubs: 'Kashmere Gate / Civil Lines', baseSurplus: 190, baseDemand: 280, donors: 16, ngos: 24 },
+      { id: 'south', name: 'South Delhi', hubs: 'Hauz Khas / Saket / Okhla', baseSurplus: 490, baseDemand: 310, donors: 42, ngos: 18 },
+      { id: 'west', name: 'West Delhi', hubs: 'Rajouri Garden / Janakpuri', baseSurplus: 210, baseDemand: 225, donors: 22, ngos: 19 },
+      { id: 'east', name: 'East Delhi & Trans-Yamuna', hubs: 'Laxmi Nagar / Anand Vihar', baseSurplus: 130, baseDemand: 185, donors: 14, ngos: 21 },
+      { id: 'noida', name: 'Noida Sector Hub', hubs: 'Sectors 18, 62 & 137', baseSurplus: 280, baseDemand: 210, donors: 31, ngos: 15 }
+    ];
+
+    const zones = baseZones.map((z) => {
+      const predSurplus = Math.round(z.baseSurplus * surplusMult * 10) / 10;
+      const predDemand = Math.round(z.baseDemand * demandMult * 10) / 10;
+      const netKg = Math.round((predSurplus - predDemand) * 10) / 10;
+      let status: 'SURPLUS' | 'DEFICIT' | 'BALANCED' = 'BALANCED';
+      if (netKg < -25) status = 'DEFICIT';
+      else if (netKg > 25) status = 'SURPLUS';
+
+      return {
+        ...z,
+        predictedSurplusKg: predSurplus,
+        predictedDemandKg: predDemand,
+        netBalanceKg: netKg,
+        status,
+        directive: status === 'DEFICIT'
+          ? `Priority inter-zone food transfer required (${Math.abs(netKg)} kg deficit)`
+          : status === 'SURPLUS'
+          ? `Staged for export to deficit corridors (+${netKg} kg surplus cushion)`
+          : 'Local distribution balanced within standard cluster radius'
+      };
+    });
+
+    const filteredZones = region === 'ALL'
+      ? zones
+      : zones.filter(z => z.id.toUpperCase() === region.toUpperCase() || z.name.toUpperCase().includes(region.toUpperCase()));
+
+    const totalSurplusKg = Math.round(filteredZones.reduce((s, z) => s + z.predictedSurplusKg, 0) * 10) / 10;
+    const totalDemandKg = Math.round(filteredZones.reduce((s, z) => s + z.predictedDemandKg, 0) * 10) / 10;
+    const netBalanceKg = Math.round((totalSurplusKg - totalDemandKg) * 10) / 10;
+    const equilibriumRatio = totalDemandKg > 0 ? Math.round((totalSurplusKg / totalDemandKg) * 1000) / 10 : 100;
+
+    const baseRescueRate = shock === 'FLEET_DISRUPTION' ? 73.5 : 94.8;
+    const volunteerBonus = Math.min(4.5, Math.max(-6.0, (volunteerCount - 180) * 0.03));
+    const rescueRate = Math.min(99.4, Math.max(68.0, Math.round((baseRescueRate + volunteerBonus) * 10) / 10));
+
+    const avgDispatchMins = Math.max(14, Math.round(24 + speedPenaltyMins - (volunteerCount - 180) * 0.04));
+
+    let macroStatus: 'OPTIMAL_CUSHION' | 'CRITICAL_DEFICIT' | 'SURPLUS_OVERFLOW' = 'OPTIMAL_CUSHION';
+    if (netBalanceKg < -50) macroStatus = 'CRITICAL_DEFICIT';
+    else if (equilibriumRatio > 140) macroStatus = 'SURPLUS_OVERFLOW';
+
+    const directives = [
+      `Active shock scenario: ${shockDescription}`,
+      netBalanceKg < 0
+        ? `City deficit of ${Math.abs(netBalanceKg)} kg detected! Mobilize inter-district transfers from high-surplus commercial corridors.`
+        : `Healthy macro buffer (+${netBalanceKg} kg cushion). Proactively direct excess cooked meals to vulnerable peripheral shelter networks.`,
+      `Optimal fleet configuration: ${volunteerCount} active couriers achieving ${avgDispatchMins} min avg transit turnaround (${rescueRate}% rescue success rate).`
+    ];
+
+    return {
+      shock,
+      region,
+      donorParticipation,
+      volunteerCount,
+      totalSurplusKg,
+      totalDemandKg,
+      netBalanceKg,
+      equilibriumRatio,
+      rescueRate,
+      avgDispatchMins,
+      macroStatus,
+      zones: filteredZones,
+      directives,
+      explanation: `AI Macro Simulation: ${shockDescription} Net platform balance: ${netBalanceKg > 0 ? '+' : ''}${netBalanceKg} kg across ${filteredZones.length} monitored city zones.`
+    };
+  },
+
   // ---------------- NOTIFICATIONS ----------------
   getNotifications(): DemoNotification[] {
     if (typeof window === 'undefined') return [];

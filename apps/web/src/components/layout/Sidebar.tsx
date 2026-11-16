@@ -29,7 +29,7 @@ export function Sidebar() {
     { href: '/dashboard/donor', label: 'Overview', icon: LayoutDashboard },
     { href: '/dashboard/donor/create', label: 'Donate Food', icon: PlusCircle, highlight: true },
     { href: '/map', label: 'Live Rescue Map', icon: MapPin },
-    { href: '/dashboard/ai', label: 'AI Surplus Forecast', icon: Sparkles },
+    { href: '/dashboard/ai/surplus', label: 'AI Surplus Forecast', icon: Sparkles },
     { href: '/analytics', label: 'Impact Analytics', icon: TrendingUp },
     { href: '/leaderboard', label: 'Leaderboard & Badges', icon: Award }
   ];
@@ -38,7 +38,7 @@ export function Sidebar() {
     { href: '/dashboard/ngo', label: 'NGO Dashboard', icon: LayoutDashboard },
     { href: '/dashboard/ngo/demand', label: 'Post Food Demand', icon: HeartHandshake },
     { href: '/map', label: 'Available Surplus Map', icon: MapPin },
-    { href: '/dashboard/ai', label: 'AI Demand Forecast', icon: Sparkles },
+    { href: '/dashboard/ai/demand', label: 'AI Demand Forecast', icon: Sparkles },
     { href: '/analytics', label: 'Distribution Stats', icon: TrendingUp },
     { href: '/leaderboard', label: 'Impact Badges', icon: Award }
   ];
@@ -53,7 +53,7 @@ export function Sidebar() {
   const adminLinks = [
     { href: '/dashboard/admin', label: 'Admin Portal', icon: ShieldCheck },
     { href: '/map', label: 'City Operations Map', icon: MapPin },
-    { href: '/dashboard/ai', label: 'AI Platform Forecast', icon: Sparkles },
+    { href: '/dashboard/ai/platform', label: 'AI Platform Forecast', icon: Sparkles },
     { href: '/analytics', label: 'Full System Analytics', icon: TrendingUp },
     { href: '/leaderboard', label: 'City Leaderboards', icon: Award }
   ];
@@ -71,7 +71,9 @@ export function Sidebar() {
         </div>
         {links.map((link) => {
           const Icon = link.icon;
-          const isActive = pathname === link.href;
+          const isActive =
+            pathname === link.href ||
+            (link.href.startsWith('/dashboard/ai') && pathname === '/dashboard/ai');
 
           return (
             <Link

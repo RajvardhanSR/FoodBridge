@@ -169,17 +169,34 @@ During runtime testing of the deployed and local web application, three signific
 
 ---
 
-## 5. The New Agentic AI Demand Forecast Layer
+## 5. The Three Specialized AI Forecast Engines
 
-The `/dashboard/ai` route was redesigned into a **Dual-Mode AI Forecasting Suite**:
+To provide each persona with a tailored, actionable experience, FoodBridge features three dedicated forecasting engines rather than a one-size-fits-all view:
 
 ```
-┌────────────────────────────────────────────────────────────────────────┐
-│               AI Demand & Surplus Forecasting Suite                    │
-├──────────────────────────────────┬─────────────────────────────────────┤
-│  [🤖 NGO Demand Agent] (Active)  │  [🍱 Donor Surplus Regressor]       │
-└──────────────────────────────────┴─────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                           FoodBridge AI Forecasting Suite                               │
+├───────────────────────────────┬─────────────────────────────┬───────────────────────────┤
+│ 🍱 AI Surplus Forecast        │ 🤖 AI Demand Forecast       │ 🌐 AI Platform Forecast   │
+│ Route: /dashboard/ai/surplus  │ Route: /dashboard/ai/demand │ Route: /dashboard/ai/platform
+│ Persona: Donors & Kitchens    │ Persona: NGOs & Shelters    │ Persona: Admins & Ops     │
+└───────────────────────────────┴─────────────────────────────┴───────────────────────────┘
 ```
+
+1. **AI Surplus Forecast (`/dashboard/ai/surplus`)** — Donor & Kitchen Waste Regressor:
+   - Evaluates expected customer footfall, commercial kitchen type (fine dining, casual, corporate buffet, bakery), and special banquet buffers.
+   - Outputs predicted surplus kg, portion counts, waste disposal savings ($), landfill diversion rates, and category waste distributions.
+
+2. **AI Demand Forecast (`/dashboard/ai/demand`)** — Agentic NGO & Shelter Demand Engine:
+   - Predicts intake requirements for homeless shelters, community kitchens, and orphanages.
+   - Integrates past trend velocity (accelerating vs volatile) and environmental/climate shocks (severe winter cold wave +45%, monsoon rains +30%, festival rush +35%).
+   - Generates cognitive 4-step reasoning chains, dynamic variance windows, and prescriptive volunteer alerts.
+
+3. **AI Platform Forecast (`/dashboard/ai/platform`)** — City-Wide Deficit & Operations Radar:
+   - Macro supply/demand equilibrium engine monitoring city-wide balance ratio (e.g. 108.4% surplus cushion).
+   - Zone-by-zone Deficit Radar Table across Central Delhi, North Delhi, South Delhi, West Delhi, East Delhi, and Noida Sector Hub.
+   - Interactive City-Wide Network Stress Simulator modeling real-world shocks (courier shortages, extreme weather, donor participation levels).
+   - Automated Inter-Zone Corridor Directives (e.g. Corridor Alpha: South Delhi -> North Delhi inter-district transfer).
 
 ### 1. Dynamic Trend & Seasonality Multipliers
 
