@@ -152,7 +152,7 @@ The platform includes a **1-Click Demo Persona Switcher** on the top navigation 
 
 ### Option 1: Live Cloud Deployment
 The application is deployed on Vercel with MongoDB Atlas:
-👉 **[Open FoodBridge AI Live](https://food-bridge-puce-zeta.vercel.app)**
+👉 **[Open FoodBridge AI Live](https://food-bridge-sepia-rho.vercel.app)**
 
 ---
 

@@ -2,7 +2,7 @@
 
 **Document Date:** November 16, 2026  
 **Repository:** [https://github.com/RajvardhanSR/FoodBridge](https://github.com/RajvardhanSR/FoodBridge)  
-**Live Website URL:** [https://food-bridge-puce-zeta.vercel.app](https://food-bridge-puce-zeta.vercel.app)  
+**Live Website URL:** [https://food-bridge-sepia-rho.vercel.app](https://food-bridge-sepia-rho.vercel.app)  
 **Local Development:** `http://localhost:3000` (AI Suite: `http://localhost:3000/dashboard/ai`)  
 **Project Objective:** AI-Powered Food Waste Reduction & Hunger Relief Platform connecting food donors (restaurants, banquets, hostels) with verified hunger relief shelters and volunteer logistics networks in real time.
 
