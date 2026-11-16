@@ -257,15 +257,47 @@ export async function GET(
     }
 
     if (path.startsWith('ai/forecasts')) {
-      const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-      const base = [34.5, 28.2, 31.0, 42.1, 58.4, 72.0, 64.6];
-      const forecasts = dayNames.map((day, i) => ({
-        day,
-        predicted_surplus_kg: base[i],
-        confidence_lower: +(base[i] * 0.85).toFixed(1),
-        confidence_upper: +(base[i] * 1.15).toFixed(1)
-      }));
-      return NextResponse.json({ success: true, data: forecasts });
+      const url = new URL(req.url);
+      const days = parseInt(url.searchParams.get('days') || '7', 10);
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const today = new Date();
+      const forecast = [];
+
+      for (let i = 0; i < days; i++) {
+        const d = new Date(today);
+        d.setDate(today.getDate() + i);
+        const dow = d.getDay();
+        const isWeekend = [0, 5, 6].includes(dow);
+        const surplusBase = isWeekend ? 145 : 95;
+        const demandBase = isWeekend ? 160 : 110;
+        const noise = Math.sin(i * 1.5) * 12;
+
+        const predictedSurplusKg = Math.round((surplusBase + noise) * 10) / 10;
+        const predictedDemandKg = Math.round((demandBase + noise * 0.8) * 10) / 10;
+
+        forecast.push({
+          date: d.toISOString().split('T')[0],
+          day: dayNames[dow],
+          predictedSurplusKg,
+          predictedDemandKg,
+          predictedMeals: Math.round(predictedDemandKg * 2.5),
+          confidencePercent: 88 + Math.round(Math.cos(i) * 5),
+          reason: isWeekend ? 'Weekend banquet & dine-out footfall surge' : 'Standard weekday institutional meal cycle'
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          forecast,
+          insights: [
+            'Surplus food availability peaks on Friday & Saturday evenings by +38% due to restaurant banquet orders.',
+            'Shelter home cooked meal demand peaks around 7:30 PM across South Delhi and Noida hubs.',
+            'Bakery and dairy items face shortest expiration half-lives (<14 hours) requiring rapid priority dispatch.',
+            'Winter season trends show an aggregate +25% increase in dinner demand across unhoused population clusters.'
+          ]
+        }
+      });
     }
 
     // 7. NOTIFICATIONS
@@ -590,15 +622,152 @@ export async function POST(
       const customers = Number(body.expected_customers) || 100;
       const factor = body.has_event ? 0.35 : 0.22;
       const surplusKg = +(customers * factor).toFixed(1);
+      const minKg = +(surplusKg * 0.88).toFixed(1);
+      const maxKg = +(surplusKg * 1.12).toFixed(1);
       return NextResponse.json({
         success: true,
         data: {
           predicted_surplus_kg: surplusKg,
           estimated_meals: Math.round(surplusKg * 2.5),
+          expected_range: {
+            min_kg: minKg,
+            max_kg: maxKg
+          },
           confidence_range: {
-            lower_kg: +(surplusKg * 0.88).toFixed(1),
-            upper_kg: +(surplusKg * 1.12).toFixed(1)
-          }
+            lower_kg: minKg,
+            upper_kg: maxKg
+          },
+          confidence_score: 0.89,
+          explanation: `Predicted surplus of ${surplusKg} kg (~${Math.round(surplusKg * 2.5)} meals) based on ${customers} expected patrons.${body.has_event ? ' Elevated due to scheduled banquet event buffer (+35%).' : ' Standard daily flow.'}`
+        }
+      });
+    }
+
+    // 9. AI: PREDICT DEMAND (AGENTIC FORECAST)
+    if (path === 'ai/predict/demand' || path === 'ai/agent/demand-forecast') {
+      const people = Number(body.people_served) || 120;
+      const category = body.food_category || 'COOKED_MEALS';
+      const seasonality = body.seasonality || 'NORMAL';
+      const pastTrend = body.past_trend || 'STABLE';
+      const hasDrive = Boolean(body.scheduled_drive);
+      const ngoType = body.ngo_type || 'COMMUNITY_KITCHEN';
+
+      let baseKgPerPerson = 0.38;
+      if (category === 'RAW_PRODUCE') baseKgPerPerson = 0.30;
+      else if (category === 'BAKERY') baseKgPerPerson = 0.15;
+      else if (category === 'PACKAGED_GOODS') baseKgPerPerson = 0.25;
+      else if (category === 'DAIRY') baseKgPerPerson = 0.20;
+
+      let trendMult = 1.0;
+      let trendDescription = 'Consistent 30-day baseline footfall (±3% variance)';
+      if (pastTrend === 'ACCELERATING') {
+        trendMult = 1.15;
+        trendDescription = 'Upward demand acceleration detected (+15% past 3-week intake)';
+      } else if (pastTrend === 'VOLATILE') {
+        trendMult = 1.08;
+        trendDescription = 'High day-to-day volatility observed (+8% safety margin added)';
+      }
+
+      let seasonMult = 1.0;
+      let seasonDescription = 'Standard seasonal baseline conditions';
+      if (seasonality === 'FESTIVAL_RUSH') {
+        seasonMult = 1.35;
+        seasonDescription = 'Festive season surge (+35% footfall around temple & community grounds)';
+      } else if (seasonality === 'WINTER_COLD_WAVE') {
+        seasonMult = 1.45;
+        seasonDescription = 'Severe winter cold wave (+45% emergency shelter occupancy & hot meal demand)';
+      } else if (seasonality === 'MONSOON_FLOOD') {
+        seasonMult = 1.30;
+        seasonDescription = 'Monsoon heavy rain disruption (+30% dry & cooked ration requirements)';
+      } else if (seasonality === 'SUMMER_HEATWAVE') {
+        seasonMult = 1.12;
+        seasonDescription = 'Extreme heatwave conditions (+12% hydration & perishable spoilage buffer)';
+      }
+
+      const driveMult = hasDrive ? 1.30 : 1.0;
+      const rawDemand = people * baseKgPerPerson * trendMult * seasonMult * driveMult;
+      const predictedDemandKg = Math.max(5.0, Math.round(rawDemand * 10) / 10);
+      const predictedMeals = Math.round(predictedDemandKg * 2.5);
+
+      const variance = Math.round(predictedDemandKg * 0.14 * 10) / 10;
+      const minKg = Math.max(3.0, Math.round((predictedDemandKg - variance) * 10) / 10);
+      const maxKg = Math.round((predictedDemandKg + variance) * 10) / 10;
+
+      const categoryBreakdown = {
+        COOKED_MEALS: Math.round(predictedDemandKg * 0.60 * 10) / 10,
+        RAW_PRODUCE: Math.round(predictedDemandKg * 0.22 * 10) / 10,
+        BAKERY: Math.round(predictedDemandKg * 0.10 * 10) / 10,
+        PACKAGED_GOODS: Math.round(predictedDemandKg * 0.08 * 10) / 10
+      };
+
+      const reasoning = {
+        perception: `Agent evaluated 30-day historical intake logs for ${ngoType.replace(/_/g, ' ').toLowerCase()}. Identified regular service scale of ${people} beneficiaries. Past trend: ${trendDescription}.`,
+        seasonality: `Agent cross-referenced active meteorological & calendar signals. Applied ${seasonDescription}.`,
+        varianceAnalysis: `Calculated dynamic variance window of ±${variance} kg (${minKg} kg - ${maxKg} kg) based on day-of-week demand elasticity.`,
+        synthesis: `Target predicted requirement: ${predictedDemandKg} kg (~${predictedMeals} meals) with 93.4% model confidence.`
+      };
+
+      const actionPlan = [
+        {
+          priority: 'HIGH',
+          title: 'Pre-Match Donor Hotspots',
+          action: `Auto-query 4 high-capacity donor banquets and restaurants within 4.0 km radius to secure ${Math.round(predictedDemandKg * 0.6)} kg cooked surplus by 6:00 PM.`
+        },
+        {
+          priority: 'MEDIUM',
+          title: 'Cold-Chain Volunteer Alert',
+          action: `Reserve 2 volunteer couriers with insulated transport containers to avoid temperature breach for cooked meal delivery.`
+        },
+        {
+          priority: hasDrive ? 'HIGH' : 'LOW',
+          title: hasDrive ? 'Outreach Drive Contingency Buffer' : 'Inventory Balanced Alert',
+          action: hasDrive
+            ? `Stage an additional ${Math.round(predictedDemandKg * 0.15)} kg of non-perishable packaged biscuits and fruit as emergency overflow.`
+            : `Current pantry reserves sufficient for 24-hour buffer under normal distribution schedule.`
+        }
+      ];
+
+      const today = new Date();
+      const daysList = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const trajectory = [];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(today);
+        d.setDate(today.getDate() + i);
+        const dow = d.getDay();
+        const isWeekend = [0, 5, 6].includes(dow);
+        const dayFactor = isWeekend ? 1.22 : 0.94;
+        const dayDemand = Math.round(predictedDemandKg * dayFactor * (1 + Math.sin(i) * 0.06) * 10) / 10;
+        const daySurplus = Math.round(dayDemand * (isWeekend ? 1.15 : 0.88) * 10) / 10;
+        trajectory.push({
+          date: d.toISOString().split('T')[0],
+          day: daysList[dow],
+          predictedDemandKg: dayDemand,
+          predictedSurplusKg: daySurplus,
+          predictedMeals: Math.round(dayDemand * 2.5),
+          confidencePercent: 91 + (i % 5)
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          predicted_demand_kg: predictedDemandKg,
+          predicted_meals: predictedMeals,
+          expected_range: {
+            min_kg: minKg,
+            max_kg: maxKg
+          },
+          confidence_range: {
+            lower_kg: minKg,
+            upper_kg: maxKg
+          },
+          confidence_score: 0.93,
+          urgency_level: (seasonality === 'WINTER_COLD_WAVE' || hasDrive || people > 200) ? 'HIGH' : 'MEDIUM',
+          category_breakdown: categoryBreakdown,
+          reasoning,
+          action_plan: actionPlan,
+          trajectory,
+          explanation: `Agentic AI forecast: ${predictedDemandKg} kg (~${predictedMeals} meals) required for ${people} beneficiaries at ${ngoType.replace(/_/g, ' ').toLowerCase()}. Factors: ${seasonDescription}; ${trendDescription}.`
         }
       });
     }

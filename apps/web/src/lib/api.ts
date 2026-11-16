@@ -150,10 +150,15 @@ function interceptDemoRequest(method: string, endpoint: string, body?: any): any
     return demoStorage.getAIMetrics();
   }
   if (method === 'GET' && cleanUrl.startsWith('/ai/forecasts')) {
-    return demoStorage.getAIForecasts();
+    const daysMatch = endpoint.match(/[?&]days=(\d+)/);
+    const days = daysMatch ? parseInt(daysMatch[1], 10) : 7;
+    return demoStorage.getAIForecasts(days);
   }
   if (method === 'POST' && cleanUrl === '/ai/predict/surplus') {
     return demoStorage.predictSurplus(body);
+  }
+  if (method === 'POST' && (cleanUrl === '/ai/predict/demand' || cleanUrl === '/ai/agent/demand-forecast')) {
+    return demoStorage.predictDemand(body);
   }
 
   return undefined;
