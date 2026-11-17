@@ -60,7 +60,7 @@ pnpm-debug.log*
 *.pem
 Thumbs.db
 
-# Local generated PDFs & scripts in root
-/*.pdf
+# Local generated PDFs & scripts
+*.pdf
 generate_*.py
 
